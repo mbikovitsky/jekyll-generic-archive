@@ -3,26 +3,95 @@ module Jekyll
   # Represents a single archive page.
   class ArchivePage < Page
 
-    # Calculates the total number of paginated pages.
-    #
-    # @param all_posts [Array<Post>] the posts.
-    # @param per_page  [Integer]     posts per page.
-    #
-    # @return [Integer] the number of pages.
-    def self.calculate_pages(all_posts, per_page)
-      (all_posts.size.to_f / per_page.to_i).ceil
-    end
+    class << self
 
-    # Ensures the given path begins with a slash.
-    #
-    # If the path begins with a slash, it will be returned unchanged.
-    # Otherwise, a slash will be prepended.
-    #
-    # @param path [String] the path
-    #
-    # @return [String]
-    def self.ensure_leading_slash(path)
-      path[0..0] == "/" ? path : "/#{path}"
+      private :new
+
+      # Initializes a new ArchivePage instance.
+      #
+      # +paginate_path+ must be of the form +some/relative/path/page:num/+,
+      # where +:num+ will be replaced by the page number, starting from 2.
+      #
+      # The first page will be placed at +#{dir}/index.html+, and subsequent
+      # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
+      # where +processed_paginate_path+ is the path of the current archive page.
+      #
+      # @param opts [Hash] the options to create the page with.
+      #
+      # @option opts [Site]                        :site            the Jekyll site instance.
+      # @option opts [String]                      :archive_id      an identifier for the archive being generated.
+      # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
+      # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
+      # @option opts [String]                      :template_path   path to the layout template to use.
+      # @option opts [String]                      :paginate_path   path relative to +dir+ where subsequent
+      # @option opts [Integer]                     :per_page        number of posts per page.
+      #
+      # @return [Hash{String => Array<ArchivePage>}]
+      def create(opts)
+        archives = {}
+        opts.fetch(:archive_posts).each do |page_id, posts|
+          num_pages = calculate_pages(posts, opts.fetch(:per_page))
+          pages = []
+          (1..num_pages).each do |page_num|
+            page_opts = {
+              # General page options
+              site:          opts.fetch(:site),
+              dir:           archive_dir(opts.fetch(:base_dir), page_id),
+              name:          "index.html",
+              template_path: opts.fetch(:template_path),
+              archive_id:    opts.fetch(:archive_id),
+              page_id:       page_id,
+              posts:         posts,
+
+              # Pagination options
+              paginate_path: opts.fetch(:paginate_path),
+              page_num:      page_num,
+              per_page:      opts.fetch(:per_page)
+            }
+            pages << self.new(page_opts)
+          end
+          archives[page_id] = posts
+        end
+        return archives
+      end
+
+      # Creates a directory path for the given archive base and page ID.
+      #
+      # This is adapted from +generate_categories.rb+
+      # (https://github.com/recurser/jekyll-plugins).
+      #
+      # @param archive_base [String] the archive base directory.
+      # @param page_id      [String] an identifier for the archive page.
+      #
+      # @return [String] path with stripped leading and trailing slashes.
+      def archive_dir(archive_base, page_id)
+        archive_base = archive_base.gsub(/^\/*(.*)\/*$/, '\1')
+        page_id = page_id.gsub(/_|\P{Word}/, '-').gsub(/-{2,}/, '-').downcase
+        File.join(archive_base, page_id)
+      end
+
+      # Calculates the total number of paginated pages.
+      #
+      # @param all_posts [Array<Post>] the posts.
+      # @param per_page  [Integer]     posts per page.
+      #
+      # @return [Integer] the number of pages.
+      def calculate_pages(all_posts, per_page)
+        (all_posts.size.to_f / per_page.to_i).ceil
+      end
+
+      # Ensures the given path begins with a slash.
+      #
+      # If the path begins with a slash, it will be returned unchanged.
+      # Otherwise, a slash will be prepended.
+      #
+      # @param path [String] the path
+      #
+      # @return [String]
+      def ensure_leading_slash(path)
+        path[0..0] == "/" ? path : "/#{path}"
+      end
+
     end
 
     # Initializes a new ArchivePage instance.
@@ -148,97 +217,6 @@ module Jekyll
       liquid["archive_pager"] = pager
 
       liquid
-    end
-
-  end
-
-  # Generates an archive from a collection of posts.
-  class GenericArchiveGenerator
-
-    # Creates a directory path for the given archive base and page ID.
-    #
-    # This is adapted from +generate_categories.rb+
-    # (https://github.com/recurser/jekyll-plugins).
-    #
-    # @param archive_base [String] the archive base directory.
-    # @param page_id      [String] an identifier for the archive page.
-    #
-    # @return [String] path with stripped leading and trailing slashes.
-    def archive_dir(archive_base, page_id)
-      archive_base = archive_base.gsub(/^\/*(.*)\/*$/, '\1')
-      page_id = page_id.gsub(/_|\P{Word}/, '-').gsub(/-{2,}/, '-').downcase
-      File.join(archive_base, page_id)
-    end
-
-    # Generates the archive.
-    #
-    # @param opts [Hash] the options to generate with.
-    #
-    # @option opts [Site]                        :site            the Jekyll site instance.
-    # @option opts [String]                      :archive_id      an identifier for the archive being generated.
-    # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
-    # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
-    # @option opts [String]                      :template_path   path to the layout template to use.
-    #
-    # @return [void]
-    def generate(opts)
-      site     = opts.fetch(:site)
-      base_dir = opts.fetch(:base_dir)
-
-      opts.fetch(:archive_posts).each do |page_id, posts|
-        page_opts = {
-          dir:     archive_dir(base_dir, page_id),
-          name:    "index.html",
-          page_id: page_id,
-          posts:   posts
-        }.merge(opts)
-        site.pages << ArchivePage.new(page_opts)
-      end
-    end
-
-  end
-
-  # Generates a paginated archive from a collection of posts.
-  class PaginatedGenericArchiveGenerator < GenericArchiveGenerator
-
-    # Initializes a new PaginatedGenericArchiveGenerator instance.
-    #
-    # @param paginate_path [String]  path relative to +base_dir+ where
-    #                                subsequent archive pages are placed.
-    # @param per_page      [Integer] number of posts per page.
-    # @param (see GenericArchiveGenerator#initialize)
-    #
-    # @see PaginatedArchivePage#initialize
-    def initialize(paginate_path, per_page, *args)
-      super(*args)
-
-      @paginate_path = paginate_path
-      @per_page = per_page
-    end
-
-    # (see GenericArchiveGenerator#generate)
-    def generate
-      @archive_posts.each do |page_id, posts|
-        pages = PaginatedArchivePage.calculate_pages(posts, @per_page)
-        (1..pages).each do |page_num|
-          opts = {
-            # General page options
-            site:          @site,
-            dir:           archive_dir(@base_dir, page_id),
-            name:          "index.html",
-            template_path: @template_path,
-            archive_id:    @archive_id,
-            page_id:       page_id,
-            posts:         posts,
-
-            # Pagination options
-            paginate_path: @paginate_path,
-            page_num:      page_num,
-            per_page:      @per_page
-          }
-          @site.pages << PaginatedArchivePage.new(opts)
-        end
-      end
     end
 
   end
