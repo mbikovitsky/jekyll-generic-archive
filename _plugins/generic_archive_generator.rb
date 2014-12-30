@@ -55,7 +55,7 @@ module Jekyll
     # @return [void]
     def generate
       @archive_posts.each do |page_id, posts|
-        page = ArchivePage.new(@site, @site.source, @base_dir, "index.html", @template_path, @archive_id, page_id, posts)
+        page = ArchivePage.new(@site, @site.source, File.join(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
         @site.pages << page
       end
     end
