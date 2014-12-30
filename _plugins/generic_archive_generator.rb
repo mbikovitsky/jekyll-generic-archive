@@ -50,12 +50,27 @@ module Jekyll
       @template_path = template_path
     end
 
+    # Creates a directory path for the given archive base and page ID.
+    #
+    # This is adapted from +generate_categories.rb+
+    # (https://github.com/recurser/jekyll-plugins).
+    #
+    # @param archive_base [String] the archive base directory.
+    # @param page_id      [String] an identifier for the archive page.
+    #
+    # @return [String] path with stripped leading and trailing slashes.
+    def archive_dir(archive_base, page_id)
+      archive_base = archive_base.gsub(/^\/*(.*)\/*$/, '\1')
+      page_id = page_id.gsub(/_|\P{Word}/, '-').gsub(/-{2,}/, '-').downcase
+      File.join(archive_base, page_id)
+    end
+
     # Generates the archive.
     #
     # @return [void]
     def generate
       @archive_posts.each do |page_id, posts|
-        page = ArchivePage.new(@site, @site.source, File.join(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
+        page = ArchivePage.new(@site, @site.source, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
         @site.pages << page
       end
     end
