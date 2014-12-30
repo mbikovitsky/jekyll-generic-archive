@@ -81,19 +81,21 @@ module Jekyll
     # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
     # where +processed_paginate_path+ is the path of the current archive page.
     #
-    # @param paginate_path [String]  path relative to +dir+ where subsequent
-    #                                archive pages are placed.
-    # @param page_num      [Integer] the current page number.
-    # @param per_page      [Integer] number of posts per page.
     # @param (see ArchivePage#initialize)
-    def initialize(paginate_path, page_num, per_page, *args)
+    #
+    # @option opts [String]  :paginate_path   path relative to +dir+ where subsequent
+    #                                         archive pages are placed.
+    # @option opts [Integer] :page_num        the current page number.
+    # @option opts [Integer] :per_page        number of posts per page.
+    # @option (see ArchivePage#initialize)
+    def initialize(opts)
       # Initialize the superclass.
-      super(*args)
+      super
 
       # Set instance variables.
-      @paginate_path = paginate_path
-      @page = page_num
-      @per_page = per_page
+      @paginate_path = opts.fetch(:paginate_path)
+      @page          = opts.fetch(:page_num)
+      @per_page      = opts.fetch(:per_page)
 
       # Set the total number of pages.
       @total_pages = self.class.calculate_pages(@posts, @per_page)
@@ -247,8 +249,22 @@ module Jekyll
       @archive_posts.each do |page_id, posts|
         pages = PaginatedArchivePage.calculate_pages(posts, @per_page)
         (1..pages).each do |page_num|
-          page = PaginatedArchivePage.new(@paginate_path, page_num, @per_page, @site, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
-          @site.pages << page
+          opts = {
+            # General page options
+            site:          @site,
+            dir:           archive_dir(@base_dir, page_id),
+            name:          "index.html",
+            template_path: @template_path,
+            archive_id:    @archive_id,
+            page_id:       page_id,
+            posts:         posts,
+
+            # Pagination options
+            paginate_path: @paginate_path,
+            page_num:      page_num,
+            per_page:      @per_page
+          }
+          @site.pages << PaginatedArchivePage.new(opts)
         end
       end
     end
