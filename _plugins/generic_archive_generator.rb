@@ -176,21 +176,6 @@ module Jekyll
   # Generates an archive from a collection of posts.
   class GenericArchiveGenerator
 
-    # Initializes a new GenericArchiveGenerator instance.
-    #
-    # @param site          [Site]                        the Jekyll site instance.
-    # @param archive_id    [String]                      an identifier for the archive being generated.
-    # @param archive_posts [Hash{String => Array<Post>}] the posts to generate the archive from.
-    # @param base_dir      [String]                      a path relative to the source where the archive should be placed.
-    # @param template_path [String]                      path to the layout template to use.
-    def initialize(site, archive_id, archive_posts, base_dir, template_path)
-      @site          = site
-      @archive_id    = archive_id
-      @archive_posts = archive_posts
-      @base_dir      = base_dir
-      @template_path = template_path
-    end
-
     # Creates a directory path for the given archive base and page ID.
     #
     # This is adapted from +generate_categories.rb+
@@ -208,19 +193,27 @@ module Jekyll
 
     # Generates the archive.
     #
+    # @param opts [Hash] the options to generate with.
+    #
+    # @option opts [Site]                        :site            the Jekyll site instance.
+    # @option opts [String]                      :archive_id      an identifier for the archive being generated.
+    # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
+    # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
+    # @option opts [String]                      :template_path   path to the layout template to use.
+    #
     # @return [void]
-    def generate
-      @archive_posts.each do |page_id, posts|
-        opts = {
-          site:          @site,
-          dir:           archive_dir(@base_dir, page_id),
-          name:          "index.html",
-          template_path: @template_path,
-          archive_id:    @archive_id,
-          page_id:       page_id,
-          posts:         posts
-        }
-        @site.pages << ArchivePage.new(opts)
+    def generate(opts)
+      site     = opts.fetch(:site)
+      base_dir = opts.fetch(:base_dir)
+
+      opts.fetch(:archive_posts).each do |page_id, posts|
+        page_opts = {
+          dir:     archive_dir(base_dir, page_id),
+          name:    "index.html",
+          page_id: page_id,
+          posts:   posts
+        }.merge(opts)
+        site.pages << ArchivePage.new(page_opts)
       end
     end
 
