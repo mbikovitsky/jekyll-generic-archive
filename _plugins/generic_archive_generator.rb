@@ -5,28 +5,30 @@ module Jekyll
 
     # Initializes a new ArchivePage instance.
     #
-    # @param site          [Site]        the Jekyll site instance.
-    # @param dir           [String]      the path between the source and the file.
-    # @param name          [String]      the filename of the file.
-    # @param template_path [String]      path to the layout template to use.
-    # @param archive_id    [String]      an identifier for the archive being generated.
-    # @param page_id       [String]      an identifier for the current archive page.
-    # @param posts         [Array<Post>] the posts to include in the page.
-    def initialize(site, dir, name, template_path, archive_id, page_id, posts)
-      @site = site
+    # @param opts [Hash] the options to create the page with.
+    #
+    # @option opts [Site]        :site                         the Jekyll site instance.
+    # @option opts [String]      :dir                          the path between the source and the file.
+    # @option opts [String]      :name          ("index.html") the filename of the file.
+    # @option opts [String]      :template_path                path to the layout template to use.
+    # @option opts [String]      :archive_id                   an identifier for the archive being generated.
+    # @option opts [String]      :page_id                      an identifier for the current archive page.
+    # @option opts [Array<Post>] :posts         ([])           the posts to include in the page.
+    def initialize(opts)
+      @site = opts.fetch(:site)
       @base = @site.source
-      @dir  = dir
-      @name = name
+      @dir  = opts.fetch(:dir)
+      @name = opts.fetch(:name, "index.html")
 
-      @template_path = template_path
-      @archive_id    = archive_id
-      @page_id       = page_id
-      @posts         = posts
+      @archive_id = opts.fetch(:archive_id)
+      @page_id    = opts.fetch(:page_id)
+      @posts      = opts.fetch(:posts, [])
 
       self.process(@name)
 
-      template_dir = File.dirname(@template_path)
-      template     = File.basename(@template_path)
+      template_path = opts.fetch(:template_path)
+      template_dir  = File.dirname(template_path)
+      template      = File.basename(template_path)
       self.read_yaml(template_dir, template)
     end
 
@@ -207,8 +209,16 @@ module Jekyll
     # @return [void]
     def generate
       @archive_posts.each do |page_id, posts|
-        page = ArchivePage.new(@site, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
-        @site.pages << page
+        opts = {
+          site:          @site,
+          dir:           archive_dir(@base_dir, page_id),
+          name:          "index.html",
+          template_path: @template_path,
+          archive_id:    @archive_id,
+          page_id:       page_id,
+          posts:         posts
+        }
+        @site.pages << ArchivePage.new(opts)
       end
     end
 
