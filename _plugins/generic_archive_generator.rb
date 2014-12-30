@@ -3,53 +3,6 @@ module Jekyll
   # Represents a single archive page.
   class ArchivePage < Page
 
-    # Initializes a new ArchivePage instance.
-    #
-    # @param opts [Hash] the options to create the page with.
-    #
-    # @option opts [Site]        :site                         the Jekyll site instance.
-    # @option opts [String]      :dir                          the path between the source and the file.
-    # @option opts [String]      :name          ("index.html") the filename of the file.
-    # @option opts [String]      :template_path                path to the layout template to use.
-    # @option opts [String]      :archive_id                   an identifier for the archive being generated.
-    # @option opts [String]      :page_id                      an identifier for the current archive page.
-    # @option opts [Array<Post>] :posts         ([])           the posts to include in the page.
-    def initialize(opts)
-      @site = opts.fetch(:site)
-      @base = @site.source
-      @dir  = opts.fetch(:dir)
-      @name = opts.fetch(:name, "index.html")
-
-      @archive_id = opts.fetch(:archive_id)
-      @page_id    = opts.fetch(:page_id)
-      @posts      = opts.fetch(:posts, [])
-
-      self.process(@name)
-
-      template_path = opts.fetch(:template_path)
-      template_dir  = File.dirname(template_path)
-      template      = File.basename(template_path)
-      self.read_yaml(template_dir, template)
-    end
-
-    # Convert this ArchivePage's data to a Hash suitable for use by Liquid.
-    #
-    # @return [Hash] the Hash representation of this ArchivePage.
-    def to_liquid
-      additional = {
-        "archive_id" => @archive_id,
-        "page_id"    => @page_id,
-        "posts"      => @posts
-      }
-
-      super.merge additional
-    end
-
-  end
-
-  # Represents a single paginated archive page.
-  class PaginatedArchivePage < ArchivePage
-
     # Calculates the total number of paginated pages.
     #
     # @param all_posts [Array<Post>] the posts.
@@ -72,7 +25,7 @@ module Jekyll
       path[0..0] == "/" ? path : "/#{path}"
     end
 
-    # Initializes a new PaginatedArchivePage instance.
+    # Initializes a new ArchivePage instance.
     #
     # +paginate_path+ must be of the form +some/relative/path/page:num/+,
     # where +:num+ will be replaced by the page number, starting from 2.
@@ -81,21 +34,36 @@ module Jekyll
     # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
     # where +processed_paginate_path+ is the path of the current archive page.
     #
-    # @param (see ArchivePage#initialize)
+    # @param opts [Hash] the options to create the page with.
     #
-    # @option opts [String]  :paginate_path   path relative to +dir+ where subsequent
-    #                                         archive pages are placed.
-    # @option opts [Integer] :page_num        the current page number.
-    # @option opts [Integer] :per_page        number of posts per page.
-    # @option (see ArchivePage#initialize)
+    # @option opts [Site]        :site                         the Jekyll site instance.
+    # @option opts [String]      :dir                          the path between the source and the file.
+    # @option opts [String]      :name          ("index.html") the filename of the file.
+    # @option opts [String]      :template_path                path to the layout template to use.
+    # @option opts [String]      :archive_id                   an identifier for the archive being generated.
+    # @option opts [String]      :page_id                      an identifier for the current archive page.
+    # @option opts [Array<Post>] :posts         ([])           the posts to include in the page.
+    # @option opts [String]      :paginate_path                path relative to +dir+ where subsequent
+    #                                                          archive pages are placed.
+    # @option opts [Integer]     :page_num                     the current page number.
+    # @option opts [Integer]     :per_page                     number of posts per page.
     def initialize(opts)
       # Initialize the superclass.
-      super
+      @site = opts.fetch(:site)
+      @base = @site.source
+      @dir  = opts.fetch(:dir)
+      @name = opts.fetch(:name, "index.html")
 
       # Set instance variables.
+      @archive_id    = opts.fetch(:archive_id)
+      @page_id       = opts.fetch(:page_id)
+      @posts         = opts.fetch(:posts, [])
       @paginate_path = opts.fetch(:paginate_path)
       @page          = opts.fetch(:page_num)
       @per_page      = opts.fetch(:per_page)
+
+      # Process the name
+      self.process(@name)
 
       # Set the total number of pages.
       @total_pages = self.class.calculate_pages(@posts, @per_page)
@@ -129,6 +97,12 @@ module Jekyll
       # Set the next page number and path.
       @next_page = @page != @total_pages ? @page + 1 : nil
       @next_page_path = page_num_to_path(@next_page)
+
+      # Read and parse the template
+      template_path = opts.fetch(:template_path)
+      template_dir  = File.dirname(template_path)
+      template      = File.basename(template_path)
+      self.read_yaml(template_dir, template)
     end
 
     # Returns the path for the given page number.
@@ -148,11 +122,18 @@ module Jekyll
       self.class.ensure_leading_slash(path)
     end
 
-    # Convert this PaginatedArchivePage's data to a Hash
+    # Convert this ArchivePage's data to a Hash
     # suitable for use by Liquid.
     #
-    # @return [Hash] the Hash representation of this PaginatedArchivePage.
+    # @return [Hash] the Hash representation of this ArchivePage.
     def to_liquid
+      additional = {
+        "archive_id" => @archive_id,
+        "page_id"    => @page_id,
+        "posts"      => @posts
+      }
+      liquid = super.merge(additional)
+
       pager = {
         "page" => @page,
         "per_page" => @per_page,
@@ -164,8 +145,6 @@ module Jekyll
         "next_page" => @next_page,
         "next_page_path" => @next_page_path
       }
-
-      liquid = super
       liquid["archive_pager"] = pager
 
       liquid
