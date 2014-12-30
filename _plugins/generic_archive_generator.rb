@@ -26,12 +26,10 @@ module Jekyll
       # @option opts [String]                      :paginate_path   path relative to +dir+ where subsequent
       # @option opts [Integer]                     :per_page        number of posts per page.
       #
-      # @return [Hash{String => Array<ArchivePage>}]
-      def create(opts)
-        archives = {}
+      # @return [void]
+      def generate(opts)
         opts.fetch(:archive_posts).each do |page_id, posts|
           num_pages = calculate_pages(posts, opts.fetch(:per_page))
-          pages = []
           (1..num_pages).each do |page_num|
             page_opts = {
               # General page options
@@ -48,11 +46,9 @@ module Jekyll
               page_num:      page_num,
               per_page:      opts.fetch(:per_page)
             }
-            pages << self.new(page_opts)
+            opts.fetch(:site).pages << self.new(page_opts)
           end
-          archives[page_id] = posts
         end
-        return archives
       end
 
       # Creates a directory path for the given archive base and page ID.
