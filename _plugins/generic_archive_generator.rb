@@ -215,4 +215,35 @@ module Jekyll
 
   end
 
+  # Generates a paginated archive from a collection of posts.
+  class PaginatedGenericArchiveGenerator < GenericArchiveGenerator
+
+    # Initializes a new PaginatedGenericArchiveGenerator instance.
+    #
+    # @param paginate_path [String]  path relative to +base_dir+ where
+    #                                subsequent archive pages are placed.
+    # @param per_page      [Integer] number of posts per page.
+    # @param (see GenericArchiveGenerator#initialize)
+    #
+    # @see PaginatedArchivePage#initialize
+    def initialize(paginate_path, per_page, *args)
+      super(*args)
+
+      @paginate_path = paginate_path
+      @per_page = per_page
+    end
+
+    # (see GenericArchiveGenerator#generate)
+    def generate
+      @archive_posts.each do |page_id, posts|
+        pages = PaginatedArchivePage.calculate_pages(posts, @per_page)
+        (1..pages).each do |page_num|
+          page = PaginatedArchivePage.new(@paginate_path, page_num, @per_page, @site, @site.source, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
+          @site.pages << page
+        end
+      end
+    end
+
+  end
+
 end
