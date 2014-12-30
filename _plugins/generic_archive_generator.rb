@@ -6,16 +6,15 @@ module Jekyll
     # Initializes a new ArchivePage instance.
     #
     # @param site          [Site]        the Jekyll site instance.
-    # @param base          [String]      the path to the source.
     # @param dir           [String]      the path between the source and the file.
     # @param name          [String]      the filename of the file.
     # @param template_path [String]      path to the layout template to use.
     # @param archive_id    [String]      an identifier for the archive being generated.
     # @param page_id       [String]      an identifier for the current archive page.
     # @param posts         [Array<Post>] the posts to include in the page.
-    def initialize(site, base, dir, name, template_path, archive_id, page_id, posts)
+    def initialize(site, dir, name, template_path, archive_id, page_id, posts)
       @site = site
-      @base = base
+      @base = @site.source
       @dir  = dir
       @name = name
 
@@ -208,7 +207,7 @@ module Jekyll
     # @return [void]
     def generate
       @archive_posts.each do |page_id, posts|
-        page = ArchivePage.new(@site, @site.source, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
+        page = ArchivePage.new(@site, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
         @site.pages << page
       end
     end
@@ -238,7 +237,7 @@ module Jekyll
       @archive_posts.each do |page_id, posts|
         pages = PaginatedArchivePage.calculate_pages(posts, @per_page)
         (1..pages).each do |page_num|
-          page = PaginatedArchivePage.new(@paginate_path, page_num, @per_page, @site, @site.source, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
+          page = PaginatedArchivePage.new(@paginate_path, page_num, @per_page, @site, archive_dir(@base_dir, page_id), "index.html", @template_path, @archive_id, page_id, posts)
           @site.pages << page
         end
       end
