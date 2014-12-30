@@ -19,15 +19,29 @@ module Jekyll
       @dir  = dir
       @name = name
 
+      @template_path = template_path
+      @archive_id    = archive_id
+      @page_id       = page_id
+      @posts         = posts
+
       self.process(@name)
 
-      template_dir = File.dirname(template_path)
-      template     = File.basename(template_path)
+      template_dir = File.dirname(@template_path)
+      template     = File.basename(@template_path)
       self.read_yaml(template_dir, template)
+    end
 
-      self.data["archive_id"] = archive_id
-      self.data["page_id"]    = page_id
-      self.data["posts"]      = posts
+    # Convert this ArchivePage's data to a Hash suitable for use by Liquid.
+    #
+    # @return [Hash] the Hash representation of this ArchivePage.
+    def to_liquid
+      additional = {
+        "archive_id" => @archive_id,
+        "page_id"    => @page_id,
+        "posts"      => @posts
+      }
+
+      super.merge additional
     end
 
   end
