@@ -32,4 +32,34 @@ module Jekyll
 
   end
 
+  # Generates an archive from a collection of posts.
+  class GenericArchiveGenerator
+
+    # Initializes a new GenericArchiveGenerator instance.
+    #
+    # @param site [Site] the Jekyll site instance.
+    # @param archive_id [String] an identifier for the archive being generated.
+    # @param archive_posts [Hash{String => Array<Post>}] the posts to generate the archive from.
+    # @param base_dir [String] a path relative to the source where the archive should be placed.
+    # @param template_path [String] path to the layout template to use.
+    def initialize(site, archive_id, archive_posts, base_dir, template_path)
+      @site          = site
+      @archive_id    = archive_id
+      @archive_posts = archive_posts
+      @base_dir      = base_dir
+      @template_path = template_path
+    end
+
+    # Generates the archive.
+    #
+    # @return [void]
+    def generate
+      @archive_posts.each do |page_id, posts|
+        page = ArchivePage.new(@site, @site.source, @base_dir, "index.html", @template_path, @archive_id, page_id, posts)
+        @site.pages << page
+      end
+    end
+
+  end
+
 end
