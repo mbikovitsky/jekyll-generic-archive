@@ -20,6 +20,9 @@ module Jekyll
       #
       # @option opts [Site]                        :site                         the Jekyll site instance.
       # @option opts [String]                      :archive_id                   an identifier for the archive being generated.
+      # @option opts [String]                      :title_perfix  ("")           optional archive page title prefix.
+      #                                                                          Each archive page's title is a combination of the prefix
+      #                                                                          and the key from the :archive_posts hash.
       # @option opts [Hash{String => Array<Post>}] :archive_posts                the posts to generate the archive from.
       # @option opts [String]                      :base_dir                     a path relative to the source where the archive should be placed.
       # @option opts [String]                      :template_path                path to the layout template to use.
@@ -33,6 +36,7 @@ module Jekyll
         # argument is not present).
         site          = opts.fetch(:site)
         archive_id    = opts.fetch(:archive_id)
+        title_prefix  = opts.fetch(:title_prefix,  "")
         archive_posts = opts.fetch(:archive_posts)
         base_dir      = opts.fetch(:base_dir)
         template_path = opts.fetch(:template_path)
@@ -73,6 +77,7 @@ module Jekyll
               # General page options
               archive_id: archive_id,
               page_id:    page_id,
+              title:      title_prefix + page_id,
 
               # Pagination options
               page:               page_num,
