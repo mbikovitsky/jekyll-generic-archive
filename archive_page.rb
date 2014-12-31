@@ -18,13 +18,13 @@ module Jekyll
       #
       # @param opts [Hash] the options to create the page with.
       #
-      # @option opts [Site]                        :site                the Jekyll site instance.
-      # @option opts [String]                      :archive_id          an identifier for the archive being generated.
-      # @option opts [Hash{String => Array<Post>}] :archive_posts       the posts to generate the archive from.
-      # @option opts [String]                      :base_dir            a path relative to the source where the archive should be placed.
-      # @option opts [String]                      :template_path       path to the layout template to use.
-      # @option opts [String]                      :paginate_path       relative path where subsequent archive pages are placed.
-      # @option opts [Integer]                     :per_page      (nil) number of posts per page.
+      # @option opts [Site]                        :site                        the Jekyll site instance.
+      # @option opts [String]                      :archive_id                  an identifier for the archive being generated.
+      # @option opts [Hash{String => Array<Post>}] :archive_posts               the posts to generate the archive from.
+      # @option opts [String]                      :base_dir                    a path relative to the source where the archive should be placed.
+      # @option opts [String]                      :template_path               path to the layout template to use.
+      # @option opts [String]                      :paginate_path ("page:num/") relative path where subsequent archive pages are placed.
+      # @option opts [Integer]                     :per_page      (nil)         number of posts per page.
       #
       # @return [void]
       def generate(opts)
@@ -35,8 +35,8 @@ module Jekyll
         archive_posts = opts.fetch(:archive_posts)
         base_dir      = opts.fetch(:base_dir)
         template_path = opts.fetch(:template_path)
-        paginate_path = opts.fetch(:paginate_path)
-        per_page      = opts.fetch(:per_page, nil)
+        paginate_path = opts.fetch(:paginate_path, "page:num/")
+        per_page      = opts.fetch(:per_page,      nil)
 
         # For each archive ID in the Hash...
         archive_posts.each do |page_id, posts|
