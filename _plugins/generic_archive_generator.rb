@@ -5,16 +5,14 @@ module Jekyll
 
     class << self
 
-      private :new
+      private_class_method :new
 
-      # Initializes a new ArchivePage instance.
+      # Generates an archive from a collection of posts.
       #
-      # +paginate_path+ must be of the form +some/relative/path/page:num/+,
+      # +:paginate_path+ must be of the form +some/relative/path/page:num/+,
       # where +:num+ will be replaced by the page number, starting from 2.
       #
-      # The first page will be placed at +#{dir}/index.html+, and subsequent
-      # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
-      # where +processed_paginate_path+ is the path of the current archive page.
+      # @see #initialize
       #
       # @param opts [Hash] the options to create the page with.
       #
@@ -23,7 +21,7 @@ module Jekyll
       # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
       # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
       # @option opts [String]                      :template_path   path to the layout template to use.
-      # @option opts [String]                      :paginate_path   path relative to +dir+ where subsequent archive pages are placed.
+      # @option opts [String]                      :paginate_path   relative path where subsequent archive pages are placed.
       # @option opts [Integer]                     :per_page        number of posts per page.
       #
       # @return [void]
@@ -144,9 +142,6 @@ module Jekyll
     end
 
     # Initializes a new ArchivePage instance.
-    #
-    # +paginate_path+ must be of the form +some/relative/path/page:num/+,
-    # where +:num+ will be replaced by the page number, starting from 2.
     #
     # The first page will be placed at +#{dir}/index.html+, and subsequent
     # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
