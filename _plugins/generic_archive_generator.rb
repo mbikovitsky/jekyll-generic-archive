@@ -23,7 +23,7 @@ module Jekyll
       # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
       # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
       # @option opts [String]                      :template_path   path to the layout template to use.
-      # @option opts [String]                      :paginate_path   path relative to +dir+ where subsequent
+      # @option opts [String]                      :paginate_path   path relative to +dir+ where subsequent archive pages are placed.
       # @option opts [Integer]                     :per_page        number of posts per page.
       #
       # @return [void]
@@ -45,22 +45,40 @@ module Jekyll
 
           # For each page number...
           (1..num_pages).each do |page_num|
+            # Calculate the first and last posts
+            init = (page_num - 1) * per_page
+            if (init + per_page - 1) >= posts.size
+              offset = posts.size
+            else
+              offset = init + per_page - 1
+            end
+
+            # Calculate the previous and next pages
+            previous_page      = page_num != 1 ? page_num - 1 : nil
+            previous_page_path = page_num_to_path(previous_page, dir, paginate_path)
+            next_page      = page_num != num_pages ? page_num + 1 : nil
+            next_page_path = page_num_to_path(next_page, dir, paginate_path)
+
+            current_page_path = page_num_to_path(page_num, dir, paginate_path)
+
             page_opts = {
               # General page options
-              site:          site,
-              dir:           dir,
-              name:          "index.html",
-              template_path: template_path,
-              archive_id:    archive_id,
-              page_id:       page_id,
-              posts:         posts,
+              archive_id: archive_id,
+              page_id:    page_id,
 
               # Pagination options
-              paginate_path: paginate_path,
-              page_num:      page_num,
-              per_page:      per_page
+              page:               page_num,
+              per_page:           per_page,
+              posts:              posts[init..offset],
+              total_posts:        posts.size,
+              total_pages:        num_pages,
+              previous_page:      previous_page,
+              previous_page_path: previous_page_path,
+              next_page:          next_page,
+              next_page_path:     next_page_path
             }
-            site.pages << self.new(page_opts)
+
+            site.pages << self.new(site, current_page_path, "index.html", template_path, page_opts)
           end
         end
       end
@@ -102,6 +120,27 @@ module Jekyll
         path[0..0] == "/" ? path : "/#{path}"
       end
 
+      # Returns the path for the given page number.
+      #
+      # @param page_num        [Integer] the page number.
+      # @param pagination_base [String]  pagination base path (location
+      #                                  of the first page).
+      # @param paginate_path   [String]  path template for constructing
+      #                                  subsequent page paths.
+      #
+      # @return [String] if the method succeeded.
+      # @return [nil]    if +page_num+ was nil.
+      def page_num_to_path(page_num, pagination_base, paginate_path)
+        return nil if page_num.nil?
+
+        path = pagination_base
+        if page_num > 1
+          path = File.join(path, paginate_path.sub(":num", page_num.to_s))
+        end
+
+        ensure_leading_slash(path)
+      end
+
     end
 
     # Initializes a new ArchivePage instance.
@@ -113,92 +152,39 @@ module Jekyll
     # pages will be placed at +#{dir}/#{processed_paginate_path}/index.html+,
     # where +processed_paginate_path+ is the path of the current archive page.
     #
-    # @param opts [Hash] the options to create the page with.
+    # @param site          [Site]   the Jekyll site instance.
+    # @param dir           [String] the path between the source and the file.
+    # @param name          [String] the filename of the file.
+    # @param template_path [String] path to the layout template to use.
+    # @param opts          [Hash]   the options to create the page with.
     #
-    # @option opts [Site]        :site                         the Jekyll site instance.
-    # @option opts [String]      :dir                          the path between the source and the file.
-    # @option opts [String]      :name          ("index.html") the filename of the file.
-    # @option opts [String]      :template_path                path to the layout template to use.
-    # @option opts [String]      :archive_id                   an identifier for the archive being generated.
-    # @option opts [String]      :page_id                      an identifier for the current archive page.
-    # @option opts [Array<Post>] :posts         ([])           the posts to include in the page.
-    # @option opts [String]      :paginate_path                path relative to +dir+ where subsequent
-    #                                                          archive pages are placed.
-    # @option opts [Integer]     :page_num                     the current page number.
-    # @option opts [Integer]     :per_page                     number of posts per page.
-    def initialize(opts)
+    # @option opts [String]      :archive_id         an identifier for the archive being generated.
+    # @option opts [String]      :page_id            an identifier for the current archive page.
+    # @option opts [Integer]     :page               the current page number.
+    # @option opts [Integer]     :per_page           number of posts per page.
+    # @option opts [Array<Post>] :posts              the posts to include in the page.
+    # @option opts [Integer]     :total_posts        total number of posts.
+    # @option opts [Integer]     :total_pages        total number of pages.
+    # @option opts [Integer]     :previous_page      previous page number.
+    # @option opts [String]      :previous_page_path previous page path.
+    # @option opts [Integer]     :next_page          next page number.
+    # @option opts [String]      :next_page_path     next page path.
+    def initialize(site, dir, name, template_path, opts)
       # Initialize the superclass.
-      @site = opts.fetch(:site)
+      @site = site
       @base = @site.source
-      @dir  = opts.fetch(:dir)
-      @name = opts.fetch(:name, "index.html")
-
-      # Set instance variables.
-      @archive_id    = opts.fetch(:archive_id)
-      @page_id       = opts.fetch(:page_id)
-      @posts         = opts.fetch(:posts, [])
-      @paginate_path = opts.fetch(:paginate_path)
-      @page          = opts.fetch(:page_num)
-      @per_page      = opts.fetch(:per_page)
+      @dir  = dir
+      @name = name
 
       # Process the name
       self.process(@name)
 
-      # Set the total number of pages.
-      @total_pages = self.class.calculate_pages(@posts, @per_page)
-
-      # Check whether the page number given is valid.
-      if @page > @total_pages
-        raise RuntimeError, "page number can't be greater than total pages: #{@page} > #{@total_pages}"
-      end
-
-      # Save the original +@dir+ as the pagination base directory.
-      @pagination_base = @dir
-
-      # Set +@dir+ to the correct value (based on the current
-      # page number).
-      @dir = page_num_to_path(@page)
-
-      # Calculate the first and last post indices.
-      init = (@page - 1) * @per_page
-      offset = (init + @per_page - 1) >= @posts.size ? @posts.size : (init + @per_page - 1)
-
-      # Set the total number of posts.
-      @total_posts = @posts.size
-
-      # Set the posts for this page.
-      @pager_posts = @posts[init..offset]
-
-      # Set the previous page number and path.
-      @previous_page = @page != 1 ? @page - 1 : nil
-      @previous_page_path = page_num_to_path(@previous_page)
-
-      # Set the next page number and path.
-      @next_page = @page != @total_pages ? @page + 1 : nil
-      @next_page_path = page_num_to_path(@next_page)
+      @page_opts = opts
 
       # Read and parse the template
-      template_path = opts.fetch(:template_path)
-      template_dir  = File.dirname(template_path)
-      template      = File.basename(template_path)
+      template_dir = File.dirname(template_path)
+      template     = File.basename(template_path)
       self.read_yaml(template_dir, template)
-    end
-
-    # Returns the path for the given page number.
-    #
-    # @param page_num [Integer] the page number.
-    #
-    # @return [String] if the method succeeded.
-    # @return [nil]    if +page_num+ was nil.
-    def page_num_to_path(page_num)
-      return nil if page_num.nil?
-
-      path = @pagination_base
-      if page_num > 1
-        path = File.join(path, @paginate_path.sub(":num", page_num.to_s))
-      end
-
-      self.class.ensure_leading_slash(path)
     end
 
     # Convert this ArchivePage's data to a Hash
@@ -206,27 +192,13 @@ module Jekyll
     #
     # @return [Hash] the Hash representation of this ArchivePage.
     def to_liquid
-      additional = {
-        "archive_id" => @archive_id,
-        "page_id"    => @page_id,
-        "posts"      => @posts
-      }
-      liquid = super.merge(additional)
+      liquid = super
 
-      pager = {
-        "page" => @page,
-        "per_page" => @per_page,
-        "posts" => @pager_posts,
-        "total_posts" => @total_posts,
-        "total_pages" => @total_pages,
-        "previous_page" => @previous_page,
-        "previous_page_path" => @previous_page_path,
-        "next_page" => @next_page,
-        "next_page_path" => @next_page_path
-      }
-      liquid["archive_pager"] = pager
+      @page_opts.each do |key, value|
+        liquid[key.id2name] = value
+      end
 
-      liquid
+      return liquid
     end
 
   end
