@@ -12,17 +12,19 @@ module Jekyll
       # +:paginate_path+ must be of the form +some/relative/path/page:num/+,
       # where +:num+ will be replaced by the page number, starting from 2.
       #
+      # To disable pagination, don't specify +:per_page+, or set it to +nil+.
+      #
       # @see #initialize
       #
       # @param opts [Hash] the options to create the page with.
       #
-      # @option opts [Site]                        :site            the Jekyll site instance.
-      # @option opts [String]                      :archive_id      an identifier for the archive being generated.
-      # @option opts [Hash{String => Array<Post>}] :archive_posts   the posts to generate the archive from.
-      # @option opts [String]                      :base_dir        a path relative to the source where the archive should be placed.
-      # @option opts [String]                      :template_path   path to the layout template to use.
-      # @option opts [String]                      :paginate_path   relative path where subsequent archive pages are placed.
-      # @option opts [Integer]                     :per_page        number of posts per page.
+      # @option opts [Site]                        :site                the Jekyll site instance.
+      # @option opts [String]                      :archive_id          an identifier for the archive being generated.
+      # @option opts [Hash{String => Array<Post>}] :archive_posts       the posts to generate the archive from.
+      # @option opts [String]                      :base_dir            a path relative to the source where the archive should be placed.
+      # @option opts [String]                      :template_path       path to the layout template to use.
+      # @option opts [String]                      :paginate_path       relative path where subsequent archive pages are placed.
+      # @option opts [Integer]                     :per_page      (nil) number of posts per page.
       #
       # @return [void]
       def generate(opts)
@@ -34,7 +36,7 @@ module Jekyll
         base_dir      = opts.fetch(:base_dir)
         template_path = opts.fetch(:template_path)
         paginate_path = opts.fetch(:paginate_path)
-        per_page      = opts.fetch(:per_page)
+        per_page      = opts.fetch(:per_page, nil)
 
         # For each archive ID in the Hash...
         archive_posts.each do |page_id, posts|
@@ -44,11 +46,17 @@ module Jekyll
           # For each page number...
           (1..num_pages).each do |page_num|
             # Calculate the first and last posts
-            init = (page_num - 1) * per_page
-            if (init + per_page - 1) >= posts.size
-              offset = posts.size
+            if not per_page.nil?
+              init = (page_num - 1) * per_page
+              if (init + per_page - 1) >= posts.size
+                offset = posts.size
+              else
+                offset = init + per_page - 1
+              end
             else
-              offset = init + per_page - 1
+              # If per_page is nil, just put all the posts on the page.
+              init   = 0
+              offset = posts.size - 1
             end
 
             # Calculate the previous and next pages
@@ -103,6 +111,7 @@ module Jekyll
       #
       # @return [Integer] the number of pages.
       def calculate_pages(all_posts, per_page)
+        return 1 if per_page.nil?
         (all_posts.size.to_f / per_page.to_i).ceil
       end
 
