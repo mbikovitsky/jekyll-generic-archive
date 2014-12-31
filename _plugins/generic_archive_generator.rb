@@ -28,25 +28,39 @@ module Jekyll
       #
       # @return [void]
       def generate(opts)
-        opts.fetch(:archive_posts).each do |page_id, posts|
-          num_pages = calculate_pages(posts, opts.fetch(:per_page))
+        # Get all arguments (throws an exception if an
+        # argument is not present).
+        site          = opts.fetch(:site)
+        archive_id    = opts.fetch(:archive_id)
+        archive_posts = opts.fetch(:archive_posts)
+        base_dir      = opts.fetch(:base_dir)
+        template_path = opts.fetch(:template_path)
+        paginate_path = opts.fetch(:paginate_path)
+        per_page      = opts.fetch(:per_page)
+
+        # For each archive ID in the Hash...
+        archive_posts.each do |page_id, posts|
+          dir = archive_dir(base_dir, page_id)
+          num_pages = calculate_pages(posts, per_page)
+
+          # For each page number...
           (1..num_pages).each do |page_num|
             page_opts = {
               # General page options
-              site:          opts.fetch(:site),
-              dir:           archive_dir(opts.fetch(:base_dir), page_id),
+              site:          site,
+              dir:           dir,
               name:          "index.html",
-              template_path: opts.fetch(:template_path),
-              archive_id:    opts.fetch(:archive_id),
+              template_path: template_path,
+              archive_id:    archive_id,
               page_id:       page_id,
               posts:         posts,
 
               # Pagination options
-              paginate_path: opts.fetch(:paginate_path),
+              paginate_path: paginate_path,
               page_num:      page_num,
-              per_page:      opts.fetch(:per_page)
+              per_page:      per_page
             }
-            opts.fetch(:site).pages << self.new(page_opts)
+            site.pages << self.new(page_opts)
           end
         end
       end
